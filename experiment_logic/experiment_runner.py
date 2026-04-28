@@ -52,8 +52,17 @@ def run_experiment(
     market_daily_data = _get_sorted_daily_data_for_market(loaded_input_data, market.market_id)
     market_news = _get_news_for_market(loaded_input_data, market.market_id)
 
+    run_dir = _create_run_directory(results_dir, market.market_id, configuration.configuration_id)
+    predictions_path = run_dir / "predictions.json"
+
     predictions: list[Prediction] = []
-    for daily_data_row in market_daily_data:
+    total_days = len(market_daily_data)
+    for day_index, daily_data_row in enumerate(market_daily_data, start=1):
+        print(
+            f"[{market.market_id} config {configuration.configuration_id}] "
+            f"{day_index}/{total_days} {daily_data_row.date.isoformat()}",
+            flush=True,
+        )
         predictions.append(
             _build_prediction_for_day(
                 market=market,
@@ -64,9 +73,8 @@ def run_experiment(
                 llm_client=llm_client,
             )
         )
+        _write_predictions(predictions_path, predictions)
 
-    run_dir = _create_run_directory(results_dir, market.market_id, configuration.configuration_id)
-    _write_predictions(run_dir / "predictions.json", predictions)
     return run_dir
 
 

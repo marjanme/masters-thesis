@@ -1,5 +1,5 @@
 import json
-from typing import Protocol
+from typing import Optional, Protocol
 from urllib import error, request
 
 from experiment_logic.types import ConversationMessage
@@ -40,6 +40,7 @@ class OllamaLLMClient:
             "model": self.model_name,
             "messages": _serialize_conversation(complete_conversation),
             "stream": False,
+            "think": False,
             "format": STRUCTURED_RESPONSE_SCHEMA,
             "options": {"temperature": 0},
         }
@@ -77,7 +78,7 @@ class OllamaLLMClient:
 
 def build_llm_client(
     provider: str,
-    model_name: str | None = "qwen3.5:4b",
+    model_name: Optional[str] = "qwen3.5:4b",
     ollama_base_url: str = "http://hivecore.famnit.upr.si:6666",
     timeout_seconds: int = 120,
 ) -> LLMClient:
