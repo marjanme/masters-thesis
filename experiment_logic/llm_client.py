@@ -1,4 +1,6 @@
 import json
+from datetime import datetime
+from pathlib import Path
 from typing import Optional, Protocol
 from urllib import error, request
 
@@ -34,6 +36,10 @@ class OllamaLLMClient:
         self.model_name = model_name
         self.ollama_base_url = ollama_base_url.rstrip("/")
         self.timeout_seconds = timeout_seconds
+        self.debug_output_dir: Optional[Path] = None
+
+    def set_debug_output_dir(self, debug_output_dir: Path) -> None:
+        self.debug_output_dir = debug_output_dir
 
     def generate_response(self, complete_conversation: list[ConversationMessage]) -> str:
         payload = {
@@ -45,7 +51,12 @@ class OllamaLLMClient:
             "options": {"temperature": 0},
         }
 
-        response_payload = self._post("/api/chat", payload)
+        try:
+            response_payload = self._post("/api/chat", payload)
+        except Exception as exc:
+            self._write_failed_payload(payload, exc)
+            raise
+
         message = response_payload.get("message", {})
         content = message.get("content")
 
@@ -74,6 +85,25 @@ class OllamaLLMClient:
 
         response_object = json.loads(response_text)
         return response_object
+
+    def _write_failed_payload(self, payload: dict, exc: Exception) -> None:
+        if self.debug_output_dir is None:
+            return
+
+        self.debug_output_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        debug_path = self.debug_output_dir / f"failed_payload_{timestamp}.json"
+        debug_object = {
+            "error_type": type(exc).__name__,
+            "error_message": str(exc),
+            "ollama_base_url": self.ollama_base_url,
+            "path": "/api/chat",
+            "payload": payload,
+        }
+        debug_path.write_text(
+            json.dumps(debug_object, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
 
 
 def build_llm_client(

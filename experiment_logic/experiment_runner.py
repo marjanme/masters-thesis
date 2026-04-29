@@ -54,6 +54,8 @@ def run_experiment(
 
     run_dir = _create_run_directory(results_dir, market.market_id, configuration.configuration_id)
     predictions_path = run_dir / "predictions.json"
+    if hasattr(llm_client, "set_debug_output_dir"):
+        llm_client.set_debug_output_dir(run_dir)
 
     predictions: list[Prediction] = []
     total_days = len(market_daily_data)
@@ -71,6 +73,7 @@ def run_experiment(
                 configuration=configuration,
                 instruction=instruction,
                 llm_client=llm_client,
+                run_dir=run_dir,
             )
         )
         _write_predictions(predictions_path, predictions)
@@ -85,6 +88,7 @@ def _build_prediction_for_day(
     configuration: Configuration,
     instruction: Instruction,
     llm_client: LLMClient,
+    run_dir: Path,
 ) -> Prediction:
     visible_news = select_visible_news(
         news_items=market_news,
@@ -103,8 +107,21 @@ def _build_prediction_for_day(
     user_message = ConversationMessage(role="user", content=rendered_prompt)
     initial_conversation = [user_message]
 
-    raw_response = llm_client.generate_response(initial_conversation)
-    parsed_response = parse_llm_response(raw_response)
+    raw_response = ""
+    try:
+        raw_response = llm_client.generate_response(initial_conversation)
+        parsed_response = parse_llm_response(raw_response)
+    except Exception as exc:
+        _write_failed_generation(
+            run_dir=run_dir,
+            market=market,
+            configuration=configuration,
+            daily_data_row=daily_data_row,
+            rendered_prompt=rendered_prompt,
+            raw_response=raw_response,
+            exc=exc,
+        )
+        raise
 
     assistant_message = ConversationMessage(role="assistant", content=raw_response)
     complete_conversation = [user_message, assistant_message]
@@ -156,5 +173,31 @@ def _write_predictions(path: Path, predictions: list[Prediction]) -> None:
 
     path.write_text(
         json.dumps(serializable_predictions, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+
+def _write_failed_generation(
+    run_dir: Path,
+    market: Market,
+    configuration: Configuration,
+    daily_data_row: DailyDataRow,
+    rendered_prompt: str,
+    raw_response: str,
+    exc: Exception,
+) -> None:
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    failure_path = run_dir / f"failed_generation_{timestamp}.json"
+    failure_object = {
+        "market_id": market.market_id,
+        "configuration_id": configuration.configuration_id,
+        "date": daily_data_row.date.isoformat(),
+        "error_type": type(exc).__name__,
+        "error_message": str(exc),
+        "rendered_prompt": rendered_prompt,
+        "raw_response": raw_response,
+    }
+    failure_path.write_text(
+        json.dumps(failure_object, indent=2, ensure_ascii=False),
         encoding="utf-8",
     )

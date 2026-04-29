@@ -4,8 +4,9 @@ from experiment_logic.types import ParsedLLMResponse
 
 
 def parse_llm_response(raw_response: str) -> ParsedLLMResponse:
+    response_text = _strip_markdown_json_fence(raw_response)
     try:
-        response_object = json.loads(raw_response)
+        response_object = json.loads(response_text)
     except json.JSONDecodeError as exc:
         raise ValueError(f"LLM response is not valid JSON: {exc}") from exc
 
@@ -19,6 +20,18 @@ def parse_llm_response(raw_response: str) -> ParsedLLMResponse:
         reasoning=reasoning,
         probability_yes=probability_yes,
     )
+
+
+def _strip_markdown_json_fence(raw_response: str) -> str:
+    response_text = raw_response.strip()
+    if not response_text.startswith("```"):
+        return response_text
+
+    lines = response_text.splitlines()
+    if len(lines) >= 3 and lines[0].strip().lower() in {"```", "```json"} and lines[-1].strip() == "```":
+        return "\n".join(lines[1:-1]).strip()
+
+    return response_text
 
 
 def _parse_reasoning(response_object: dict) -> str:
