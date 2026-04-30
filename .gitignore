@@ -1,2 +1,5 @@
 __pycache__/
 *.pyc
+results/*
+!results/.gitkeep
+input_data/*
