@@ -1,0 +1,9 @@
+[
+  {
+    "configuration_id": "1",
+    "instruction_id": "1",
+    "show_market_probabilities": true,
+    "other_traders": "llms",
+    "news_mode": "all_until_day"
+  }
+]

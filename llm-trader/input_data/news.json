@@ -1,0 +1,9 @@
+[
+  {
+    "news_id": "1",
+    "market_id": "1",
+    "date": "2026-12-08",
+    "title": "New poll shows a small lead for candidate X",
+    "content": "The latest poll gives candidate X a three-point advantage."
+  }
+]

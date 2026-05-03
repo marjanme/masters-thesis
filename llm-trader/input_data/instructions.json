@@ -1,0 +1,6 @@
+[
+  {
+    "instruction_id": "1",
+    "text": "Estimate the probability that the market resolves YES. Use the provided information only. Return valid JSON with a short reasoning and probability_yes."
+  }
+]
