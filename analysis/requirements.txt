@@ -1,0 +1,11 @@
+jupyterlab
+notebook
+ipykernel
+pandas
+numpy
+scipy
+statsmodels
+pingouin
+matplotlib
+seaborn
+openpyxl
