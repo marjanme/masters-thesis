@@ -1,0 +1,88 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[slovene]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{pdflscape}
+\usepackage{caption}
+\usepackage{hyperref}
+\usepackage{array}
+\geometry{margin=1.8cm}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.45em}
+\captionsetup{font=small, labelfont=bf}
+
+\title{Preliminarna analiza LLM napovedi}
+\author{Marjan Meglen}
+\date{4. Maj 2026}
+
+\begin{document}
+\maketitle
+
+\section{Namen in podatki}
+
+Analiza povzema preliminarne rezultate eksperimenta \texttt{llm-trader}. Osnovna spremenljivka je $p_{yes}$, tj. verjetnost, ki jo je model pripisal razrešitvi trga v \texttt{YES}.
+
+Podatki vsebujejo 6 trgov, 12 konfiguracij in 20 dnevnih napovedi na trg in konfiguracijo. Skupaj je analiziranih 1440 napovedi. Primerjave s parnimi t-testi so izvedene ločeno po trgih, pri čemer je par definiran z istim datumom in dvema primerjanima konfiguracijama.
+
+\input{tables/configurations.tex}
+
+\section{Opisni rezultati}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{../outputs/figures/heatmap_mean_p_yes_market_config.png}
+    \caption{Povprečni $p_{yes}$ po trgih in konfiguracijah.}
+    \label{fig:heatmap}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.98\textwidth]{../outputs/figures/lineplots_p_yes_by_market.png}
+    \caption{$p_{yes}$ skozi čas po trgih in konfiguracijah.}
+    \label{fig:lineplots}
+\end{figure}
+
+\begin{landscape}
+\input{tables/summary_by_market_config.tex}
+\end{landscape}
+
+\begin{landscape}
+\input{tables/summary_by_market_factor.tex}
+\end{landscape}
+
+\section{Parni t-testi}
+
+Pozitivna razlika pomeni, da je bila vrednost $p_{yes}$ višja v konfiguraciji A kot v konfiguraciji B. V tabelah so prikazani povprečna razlika, 95\% interval zaupanja, statistika $t$ in vrednost $p$.
+
+\subsection{Učinek novic}
+
+\begin{landscape}
+\input{tables/ttests_news.tex}
+\end{landscape}
+
+\subsection{Učinek prikaza tržnih verjetnosti}
+
+\begin{landscape}
+\input{tables/ttests_market_probabilities.tex}
+\end{landscape}
+
+\subsection{Učinek informacije o drugih udeležencih}
+
+\begin{landscape}
+\input{tables/ttests_trader_framing.tex}
+\end{landscape}
+
+\section{Kratek povzetek}
+
+\begin{itemize}
+    \item Prikaz tržnih verjetnosti ima najbolj izrazit in najbolj konsistenten vpliv na napovedi $p_{yes}$.
+    \item Učinek novic je odvisen od trga in konfiguracije; smer učinka ni enotna čez vse trge.
+    \item Informacija o drugih udeležencih trga ima manj enoten učinek kot prikaz tržnih verjetnosti.
+    \item Pri primerjavah \texttt{llms}, \texttt{humans} in \texttt{none} so razlike večinoma tržno in konfiguracijsko specifične.
+\end{itemize}
+
+\end{document}
