@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Protocol
@@ -32,10 +33,17 @@ class MockLLMClient:
 
 
 class OllamaLLMClient:
-    def __init__(self, model_name: str, ollama_base_url: str, timeout_seconds: int) -> None:
+    def __init__(
+        self,
+        model_name: str,
+        ollama_base_url: str,
+        timeout_seconds: int,
+        api_key: Optional[str] = None,
+    ) -> None:
         self.model_name = model_name
         self.ollama_base_url = ollama_base_url.rstrip("/")
         self.timeout_seconds = timeout_seconds
+        self.api_key = api_key
         self.debug_output_dir: Optional[Path] = None
 
     def set_debug_output_dir(self, debug_output_dir: Path) -> None:
@@ -67,10 +75,14 @@ class OllamaLLMClient:
 
     def _post(self, path: str, payload: dict) -> dict:
         body = json.dumps(payload).encode("utf-8")
+        headers = {"Content-Type": "application/json"}
+        if self.api_key is not None:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+
         req = request.Request(
             url=f"{self.ollama_base_url}{path}",
             data=body,
-            headers={"Content-Type": "application/json"},
+            headers=headers,
             method="POST",
         )
 
@@ -98,6 +110,7 @@ class OllamaLLMClient:
             "error_message": str(exc),
             "ollama_base_url": self.ollama_base_url,
             "path": "/api/chat",
+            "api_key_configured": self.api_key is not None,
             "payload": payload,
         }
         debug_path.write_text(
@@ -111,6 +124,7 @@ def build_llm_client(
     model_name: Optional[str] = "qwen3.5:4b",
     ollama_base_url: str = "http://hivecore.famnit.upr.si:6666",
     timeout_seconds: int = 120,
+    api_key: Optional[str] = None,
 ) -> LLMClient:
     if provider == "mock":
         return MockLLMClient()
@@ -122,6 +136,7 @@ def build_llm_client(
             model_name=model_name,
             ollama_base_url=ollama_base_url,
             timeout_seconds=timeout_seconds,
+            api_key=api_key or _load_hivecore_api_key(),
         )
 
     raise ValueError(f"Unsupported provider: {provider!r}.")
@@ -129,3 +144,50 @@ def build_llm_client(
 
 def _serialize_conversation(complete_conversation: list[ConversationMessage]) -> list[dict[str, str]]:
     return [{"role": message.role, "content": message.content} for message in complete_conversation]
+
+
+def _load_hivecore_api_key() -> Optional[str]:
+    env_value = os.environ.get("HIVECORE_API_KEY")
+    if env_value is not None and env_value.strip():
+        return env_value.strip()
+
+    for env_path in _candidate_env_paths():
+        loaded_value = _read_env_value(env_path, "HIVECORE_API_KEY")
+        if loaded_value is not None and loaded_value.strip():
+            return loaded_value.strip()
+
+    return None
+
+
+def _candidate_env_paths() -> list[Path]:
+    project_dir = Path(__file__).resolve().parents[1]
+    paths = [Path.cwd() / ".env", project_dir / ".env"]
+    unique_paths: list[Path] = []
+    for path in paths:
+        if path not in unique_paths:
+            unique_paths.append(path)
+    return unique_paths
+
+
+def _read_env_value(env_path: Path, key: str) -> Optional[str]:
+    if not env_path.exists():
+        return None
+
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        stripped_line = line.strip()
+        if not stripped_line or stripped_line.startswith("#") or "=" not in stripped_line:
+            continue
+
+        name, value = stripped_line.split("=", 1)
+        if name.strip() != key:
+            continue
+
+        return _strip_env_quotes(value.strip())
+
+    return None
+
+
+def _strip_env_quotes(value: str) -> str:
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+        return value[1:-1]
+    return value
