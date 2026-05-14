@@ -74,6 +74,13 @@ Vsi vhodni podatki so v mapi `input_data/`:
 - `instructions.json`: možna navodila za LLM
 - `configurations.json`: možne eksperimentalne konfiguracije
 
+`news.json` lahko vsebuje tudi dodatne metapodatke iz faze semantičnega filtriranja:
+
+- `title_similarity_rank`
+- `semantic_is_relevant`
+- `semantic_relevance_score`
+- `semantic_relevance_reason`
+
 Program pri nalaganju preveri:
 
 - obvezna polja,

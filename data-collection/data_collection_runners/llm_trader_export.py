@@ -9,8 +9,9 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 MARKETS_PATH = ROOT / "collected_data" / "0_market_metadata" / "data.json"
 DAILY_PATH = ROOT / "collected_data" / "1_market_daily_probabilities" / "data.json"
-TEXT_PATH = ROOT / "collected_data" / "4_selected_article_text" / "data.json"
-OUTPUT_DIR = ROOT / "collected_data" / "5_llm_trader_export"
+SEMANTIC_NEWS_PATH = ROOT / "collected_data" / "5_semantic_news_filter" / "data.json"
+OUTPUT_DIR = ROOT / "collected_data" / "6_llm_trader_export"
+MIN_RELEVANCE_SCORE = 6
 
 
 def main() -> int:
@@ -24,6 +25,7 @@ def main() -> int:
                 "market_id": row["market_id"],
                 "question": row["question"],
                 "resolution_date": row["resolution_date"],
+                "resolved_yes": row["resolved_yes"],
             }
             for row in markets
         ],
@@ -36,7 +38,7 @@ def main() -> int:
             if row["market_id"] in windows and row["date"] in windows[row["market_id"]]
         ],
     )
-    write_json(OUTPUT_DIR / "news.json", news_rows(load_json(TEXT_PATH)))
+    write_json(OUTPUT_DIR / "news.json", news_rows(load_json(SEMANTIC_NEWS_PATH)))
     return 0
 
 
@@ -45,22 +47,38 @@ def news_rows(articles: list[dict[str, Any]]) -> list[dict[str, Any]]:
     seen: set[tuple[str, str, str]] = set()
 
     for article in articles:
-        for reference in article["selection_references"]:
+        for reference in article["semantic_relevance"]:
+            if not include_reference(reference):
+                continue
             key = (reference["market_id"], article["date"], article["url"])
             if key in seen:
                 continue
             seen.add(key)
             rows.append(
                 {
-                    "news_id": news_id(reference["market_id"], article["date"], article["source"], reference["rank"], len(rows) + 1),
+                    "news_id": news_id(
+                        reference["market_id"],
+                        article["date"],
+                        article["source"],
+                        reference["title_similarity_rank"],
+                        len(rows) + 1,
+                    ),
                     "market_id": reference["market_id"],
                     "date": article["date"],
                     "title": article["title"],
                     "content": article["content"],
+                    "title_similarity_rank": reference["title_similarity_rank"],
+                    "semantic_is_relevant": reference["is_relevant"],
+                    "semantic_relevance_score": reference["relevance_score"],
+                    "semantic_relevance_reason": reference["reason"],
                 }
             )
 
     return sorted(rows, key=lambda row: (row["market_id"], row["date"], row["news_id"]))
+
+
+def include_reference(reference: dict[str, Any]) -> bool:
+    return bool(reference["is_relevant"]) and int(reference["relevance_score"]) >= MIN_RELEVANCE_SCORE
 
 
 def news_id(market_id: str, current_date: str, source: str, rank: int, ordinal: int) -> str:

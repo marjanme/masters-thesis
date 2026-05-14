@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from datetime import date
 from typing import Literal
@@ -13,6 +15,7 @@ class Market:
     market_id: str
     question: str
     resolution_date: date
+    resolved_yes: bool = True
 
 
 @dataclass(frozen=True)
@@ -30,6 +33,10 @@ class NewsItem:
     date: date
     title: str
     content: str
+    title_similarity_rank: int | None = None
+    semantic_is_relevant: bool | None = None
+    semantic_relevance_score: int | None = None
+    semantic_relevance_reason: str | None = None
 
 
 @dataclass(frozen=True)

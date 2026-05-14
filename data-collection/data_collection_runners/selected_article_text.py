@@ -13,6 +13,7 @@ from urllib import request
 ROOT = Path(__file__).resolve().parents[1]
 INPUT_PATH = ROOT / "collected_data" / "3_selected_article_embeddings" / "data.json"
 OUTPUT_PATH = ROOT / "collected_data" / "4_selected_article_text" / "data.json"
+PROGRESS_INTERVAL = 50
 HINTS = {
     "cnn": ("article", "article__content", "article-body", "body-text", "main-content"),
     "nypost": ("article", "entry-content", "single__content", "article-body", "post-content"),
@@ -24,8 +25,20 @@ HINTS = {
 def main() -> int:
     rows: list[dict[str, Any]] = []
     failures = 0
+    grouped = grouped_references()
+    total_urls = len(grouped)
+    total_references = sum(len(references) for references in grouped.values())
+    started_at = time.monotonic()
 
-    for url, references in grouped_references().items():
+    print(
+        "selected_article_text started: "
+        f"urls={total_urls} "
+        f"references={total_references} "
+        f"progress_interval={PROGRESS_INTERVAL}",
+        flush=True,
+    )
+
+    for processed_urls, (url, references) in enumerate(grouped.items(), start=1):
         first = references[0]
         try:
             html = fetch_html(url)
@@ -45,10 +58,65 @@ def main() -> int:
             failures += 1
             print(f"{url}: {exc}", flush=True)
         time.sleep(0.5)
+        if should_report_progress(processed_urls, total_urls):
+            print_progress(
+                processed_urls=processed_urls,
+                total_urls=total_urls,
+                saved_articles=len(rows),
+                failures=failures,
+                started_at=started_at,
+            )
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_PATH.write_text(json.dumps(rows, indent=2), encoding="utf-8")
+    print(
+        "selected_article_text completed: "
+        f"urls={total_urls} "
+        f"references={total_references} "
+        f"saved_articles={len(rows)} "
+        f"failures={failures} "
+        f"elapsed={format_duration(time.monotonic() - started_at)} "
+        f"output={OUTPUT_PATH}",
+        flush=True,
+    )
     return 1 if failures else 0
+
+
+def should_report_progress(processed_urls: int, total_urls: int) -> bool:
+    return processed_urls == total_urls or processed_urls % PROGRESS_INTERVAL == 0
+
+
+def print_progress(
+    processed_urls: int,
+    total_urls: int,
+    saved_articles: int,
+    failures: int,
+    started_at: float,
+) -> None:
+    elapsed = time.monotonic() - started_at
+    rate = processed_urls / elapsed if elapsed > 0 else 0
+    remaining = total_urls - processed_urls
+    eta = remaining / rate if rate > 0 else None
+    print(
+        "selected_article_text progress "
+        f"{processed_urls}/{total_urls} "
+        f"saved_articles={saved_articles} "
+        f"failures={failures} "
+        f"elapsed={format_duration(elapsed)} "
+        f"eta={format_duration(eta) if eta is not None else 'unknown'}",
+        flush=True,
+    )
+
+
+def format_duration(seconds: float) -> str:
+    rounded_seconds = max(0, int(seconds))
+    hours, remainder = divmod(rounded_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    if hours:
+        return f"{hours}h {minutes}m {seconds}s"
+    if minutes:
+        return f"{minutes}m {seconds}s"
+    return f"{seconds}s"
 
 
 def grouped_references() -> dict[str, list[dict[str, Any]]]:

@@ -49,13 +49,21 @@ def main() -> int:
     rows: list[dict[str, object]] = []
     news = load_news()
     failures = 0
+    processed_candidates = 0
+    last_reported_candidates = -1
+    cache_hits = 0
+    cache_misses = 0
 
     try:
         markets = load_json(MARKETS_PATH)[: args.limit_markets]
         total_candidates = count_candidates(markets, news, args.limit_days)
         started_at = time.monotonic()
         for market in markets:
-            market_embedding = embedding(cache, client, market["question"])
+            market_embedding, cache_hit = embedding(cache, client, market["question"])
+            if cache_hit:
+                cache_hits += 1
+            else:
+                cache_misses += 1
             current_dates = limited_window_days(market["resolution_date"], args.limit_days)
             for current_date in current_dates:
                 for source in SOURCES:
@@ -63,12 +71,35 @@ def main() -> int:
                     scored = []
                     for article in candidates:
                         try:
-                            article_embedding = embedding(cache, client, article["title"])
+                            article_embedding, cache_hit = embedding(cache, client, article["title"])
+                            if cache_hit:
+                                cache_hits += 1
+                            else:
+                                cache_misses += 1
                         except Exception as exc:  # noqa: BLE001
                             failures += 1
                             print(f"Skipping article embedding after error: {exc}", flush=True)
                             continue
                         scored.append((similarity(market_embedding, article_embedding), article, article_embedding))
+                    processed_candidates += len(candidates)
+                    if (
+                        processed_candidates != last_reported_candidates
+                        and (
+                            processed_candidates == total_candidates
+                            or processed_candidates // 1000 != (processed_candidates - len(candidates)) // 1000
+                        )
+                    ):
+                        last_reported_candidates = processed_candidates
+                        print(
+                            "selected_article_embeddings progress "
+                            f"{processed_candidates}/{total_candidates} "
+                            f"cache_hits={cache_hits} "
+                            f"cache_misses={cache_misses} "
+                            f"failures={failures} "
+                            f"elapsed={format_duration(time.monotonic() - started_at)} "
+                            f"eta={estimated_remaining(started_at, processed_candidates, total_candidates)}",
+                            flush=True,
+                        )
                     scored.sort(key=lambda item: (-item[0], item[1]["title"], item[1]["url"]))
                     for rank, (score, article, article_embedding) in enumerate(scored[:5], start=1):
                         rows.append(
@@ -94,6 +125,8 @@ def main() -> int:
         f"markets={len(markets)} "
         f"candidate_rows={total_candidates} "
         f"selected_rows={len(rows)} "
+        f"cache_hits={cache_hits} "
+        f"cache_misses={cache_misses} "
         f"failures={failures} "
         f"elapsed={format_duration(time.monotonic() - started_at)}",
         flush=True,
@@ -145,18 +178,18 @@ def count_candidates(
     return total
 
 
-def embedding(cache: sqlite3.Connection, client: "HiveCoreEmbeddingClient", text: str) -> list[float]:
+def embedding(cache: sqlite3.Connection, client: "HiveCoreEmbeddingClient", text: str) -> tuple[list[float], bool]:
     row = cache.execute(
         "SELECT vector FROM embeddings_v2 WHERE model_name = ? AND text = ?",
         (client.model_name, text),
     ).fetchone()
     if row:
-        return decode(row[0])
+        return decode(row[0]), True
 
     vector = client.embedding(text)
     cache.execute("INSERT INTO embeddings_v2 VALUES (?, ?, ?)", (client.model_name, text, encode(vector)))
     cache.commit()
-    return vector
+    return vector, False
 
 
 class HiveCoreEmbeddingClient:
@@ -244,6 +277,14 @@ def decode(blob: bytes) -> list[float]:
 
 def load_json(path: Path):
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def estimated_remaining(started_at: float, processed: int, total: int) -> str:
+    if processed <= 0 or total <= 0:
+        return "unknown"
+    elapsed = time.monotonic() - started_at
+    remaining = elapsed * (total - processed) / processed
+    return format_duration(remaining)
 
 
 def format_duration(seconds: float) -> str:

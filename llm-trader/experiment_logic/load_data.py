@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from datetime import date
 from pathlib import Path
@@ -30,6 +32,7 @@ def load_input_data(input_data_dir: Path) -> LoadedInputData:
                 market_id=market_id,
                 question=_require_non_empty_string(row, "question"),
                 resolution_date=_parse_date(_require_non_empty_string(row, "resolution_date"), "resolution_date"),
+                resolved_yes=_optional_boolean(row, "resolved_yes", default=True),
             )
         )
 
@@ -89,6 +92,10 @@ def load_input_data(input_data_dir: Path) -> LoadedInputData:
                 date=_parse_date(_require_non_empty_string(row, "date"), "date"),
                 title=_require_non_empty_string(row, "title"),
                 content=_require_non_empty_string(row, "content"),
+                title_similarity_rank=_optional_integer(row, "title_similarity_rank"),
+                semantic_is_relevant=_optional_boolean(row, "semantic_is_relevant"),
+                semantic_relevance_score=_optional_relevance_score(row, "semantic_relevance_score"),
+                semantic_relevance_reason=_optional_non_empty_string(row, "semantic_relevance_reason"),
             )
         )
 
@@ -173,6 +180,52 @@ def _require_boolean(row: dict, field_name: str) -> bool:
         raise ValueError(f"Field {field_name!r} must be a boolean, got {type(value).__name__}.")
 
     return value
+
+
+def _optional_boolean(row: dict, field_name: str, default: bool | None = None) -> bool | None:
+    if field_name not in row:
+        return default
+
+    value = row[field_name]
+    if not isinstance(value, bool):
+        raise ValueError(f"Field {field_name!r} must be a boolean, got {type(value).__name__}.")
+
+    return value
+
+
+def _optional_non_empty_string(row: dict, field_name: str) -> str | None:
+    if field_name not in row:
+        return None
+
+    value = row[field_name]
+    if not isinstance(value, str):
+        raise ValueError(f"Field {field_name!r} must be a string, got {type(value).__name__}.")
+
+    value = value.strip()
+    if not value:
+        raise ValueError(f"Field {field_name!r} must be a non-empty string.")
+
+    return value
+
+
+def _optional_integer(row: dict, field_name: str) -> int | None:
+    if field_name not in row:
+        return None
+
+    value = row[field_name]
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise ValueError(f"Field {field_name!r} must be an integer, got {type(value).__name__}.")
+
+    return value
+
+
+def _optional_relevance_score(row: dict, field_name: str) -> int | None:
+    score = _optional_integer(row, field_name)
+    if score is None:
+        return None
+    if score < 1 or score > 10:
+        raise ValueError(f"Field {field_name!r} must be between 1 and 10, got {score}.")
+    return score
 
 
 def _parse_date(value: str, field_name: str) -> date:
