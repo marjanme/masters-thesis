@@ -1,6 +1,6 @@
 market_id,configuration_id,show_market_probabilities,news_shown,other_traders,n,mean_p_yes,sd_p_yes,min_p_yes,max_p_yes
-fed_decision_in_december,1,True,True,llms,20,0.724,0.1915696932409222,0.28,0.91
-fed_decision_in_december,2,True,False,llms,20,0.799,0.18675624417095704,0.305,0.935
+fed_decision_in_december,1,True,True,llms,20,0.5,0.0,0.5,0.5
+fed_decision_in_december,2,True,False,llms,20,0.5,0.0,0.5,0.5
 fed_decision_in_december,3,True,True,humans,20,0.7502500000000001,0.20313642680409844,0.28,0.935
 fed_decision_in_december,4,True,False,humans,20,0.799,0.18675624417095704,0.305,0.935
 fed_decision_in_december,5,True,True,none,20,0.733,0.20122257904069682,0.3,0.935
