@@ -6,7 +6,7 @@ from typing import Literal
 
 
 OtherTraders = Literal["llms", "humans", "none"]
-NewsMode = Literal["all_until_day", "none"]
+NewsMode = Literal["current_day", "none"]
 ConversationRole = Literal["user", "assistant"]
 
 

@@ -29,7 +29,7 @@ Primer konfiguracije:
   "instruction_id": "1",
   "show_market_probabilities": true,
   "other_traders": "llms",
-  "news_mode": "all_until_day"
+  "news_mode": "current_day"
 }
 ```
 
@@ -38,7 +38,12 @@ Ta primer pomeni, da model:
 - dobi navodilo z ID `1`,
 - vidi trenutni verjetnosti `YES` in `NO`,
 - dobi informacijo, da so drugi udeleženci trga LLM agenti,
-- vidi vse novice do trenutnega dne.
+- vidi samo novice za trenutni dan.
+
+Polje `news_mode` podpira dve vrednosti:
+
+- `current_day`: v poziv se vključijo samo novice z istim datumom kot trenutna dnevna napoved,
+- `none`: novice se ne vključijo.
 
 ## Potek eksperimenta
 

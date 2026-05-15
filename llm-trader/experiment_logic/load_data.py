@@ -18,7 +18,7 @@ from experiment_logic.types import (
 
 
 VALID_OTHER_TRADERS = {"llms", "humans", "none"}
-VALID_NEWS_MODES = {"all_until_day", "none"}
+VALID_NEWS_MODES = {"current_day", "none"}
 
 
 def load_input_data(input_data_dir: Path) -> LoadedInputData:

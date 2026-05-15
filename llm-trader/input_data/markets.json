@@ -1,7 +1,38 @@
 [
   {
-    "market_id": "1",
-    "question": "Will candidate X win the election?",
-    "resolution_date": "2026-12-20"
+    "market_id": "who_will_be_inaugurated_as_president",
+    "question": "Will Donald Trump be inaugurated?",
+    "resolution_date": "2025-01-20",
+    "resolved_yes": true
+  },
+  {
+    "market_id": "new_york_city_mayoral_election",
+    "question": "Will Zohran Mamdani win the 2025 NYC mayoral election?",
+    "resolution_date": "2025-11-05",
+    "resolved_yes": true
+  },
+  {
+    "market_id": "fed_decision_in_december",
+    "question": "Fed decreases interest rates by 25 bps after December 2025 meeting?",
+    "resolution_date": "2025-12-10",
+    "resolved_yes": true
+  },
+  {
+    "market_id": "fed_decision_in_october",
+    "question": "Fed decreases interest rates by 25 bps after October 2025 meeting?",
+    "resolution_date": "2025-10-29",
+    "resolved_yes": true
+  },
+  {
+    "market_id": "will_zelenskyy_wear_a_suit_before_july",
+    "question": "Will Zelenskyy wear a suit before July?",
+    "resolution_date": "2025-07-09",
+    "resolved_yes": false
+  },
+  {
+    "market_id": "fed_decision_in_september",
+    "question": "Fed decreases interest rates by 25 bps after September 2025 meeting?",
+    "resolution_date": "2025-09-17",
+    "resolved_yes": true
   }
 ]

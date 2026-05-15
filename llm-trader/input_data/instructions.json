@@ -1,6 +1,6 @@
 [
   {
     "instruction_id": "1",
-    "text": "Estimate the probability that the market resolves YES. Use the provided information only. Return valid JSON with a short reasoning and probability_yes."
+    "text": "You are participating in a prediction market. Your objective is to maximize long-run expected returns by giving a well-calibrated estimate of the probability that the market resolves YES. Use only the information provided in this prompt. Consider the market question, current date, resolution date, any provided market probabilities, information about other market participants, and any provided news. Return valid JSON with a short reasoning and probability_yes."
   }
 ]
